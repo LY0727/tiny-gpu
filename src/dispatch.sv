@@ -17,7 +17,7 @@ module dispatch #(
     input wire [7:0] thread_count,
 
     // Core States
-    input reg [NUM_CORES-1:0] core_done,
+    input logic [NUM_CORES-1:0] core_done,
     output reg [NUM_CORES-1:0] core_start,
     output reg [NUM_CORES-1:0] core_reset,
     output reg [7:0] core_block_id [NUM_CORES-1:0],
@@ -50,6 +50,7 @@ module dispatch #(
             end
         end else if (start) begin    
             // EDA: Indirect way to get @(posedge start) without driving from 2 different clocks
+            // 检测到start信号，第一个clk对各core复位一下？ 
             if (!start_execution) begin 
                 start_execution <= 1;
                 for (int i = 0; i < NUM_CORES; i++) begin
@@ -58,10 +59,13 @@ module dispatch #(
             end
 
             // If the last block has finished processing, mark this kernel as done executing
+            // 这个kernel中的所有block都完成了，done拉高，反馈给CPU。
             if (blocks_done == total_blocks) begin 
                 done <= 1;
             end
-
+            // 每个core复位后，依次进行block的派发,
+            // 看硬件实现仅仅只是进行了一种分配， 这个硬件肯定是需要抽象出对应的编程模型，适配的进行编程的
+            // 这里 for 语句中，阻塞赋值 是很关键的。  初学需要get一下
             for (int i = 0; i < NUM_CORES; i++) begin
                 if (core_reset[i]) begin 
                     core_reset[i] <= 0;
@@ -78,7 +82,7 @@ module dispatch #(
                     end
                 end
             end
-
+            // 检测到某个core中的  block执行完成
             for (int i = 0; i < NUM_CORES; i++) begin
                 if (core_start[i] && core_done[i]) begin
                     // If a core just finished executing it's current block, reset it

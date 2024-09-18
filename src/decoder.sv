@@ -8,8 +8,8 @@ module decoder (
     input wire clk,
     input wire reset,
 
-    input reg [2:0] core_state,
-    input reg [15:0] instruction,
+    input logic [2:0] core_state,
+    input logic [15:0] instruction,
     
     // Instruction Signals
     output reg [3:0] decoded_rd_address,
@@ -32,7 +32,7 @@ module decoder (
     output reg decoded_ret
 );
     localparam NOP = 4'b0000,
-        BRnzp = 4'b0001,
+        BRnzp = 4'b0001,  
         CMP = 4'b0010,
         ADD = 4'b0011,
         SUB = 4'b0100,
@@ -74,7 +74,7 @@ module decoder (
                 decoded_mem_read_enable <= 0;
                 decoded_mem_write_enable <= 0;
                 decoded_nzp_write_enable <= 0;
-                decoded_reg_input_mux <= 0;
+                decoded_reg_input_mux <= 0;      //
                 decoded_alu_arithmetic_mux <= 0;
                 decoded_alu_output_mux <= 0;
                 decoded_pc_mux <= 0;

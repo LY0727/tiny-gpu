@@ -10,7 +10,7 @@ module core #(
     parameter DATA_MEM_DATA_BITS = 8,
     parameter PROGRAM_MEM_ADDR_BITS = 8,
     parameter PROGRAM_MEM_DATA_BITS = 16,
-    parameter THREADS_PER_BLOCK = 4
+    parameter THREADS_PER_BLOCK = 4     // 每个块 4 线程
 ) (
     input wire clk,
     input wire reset,
@@ -19,32 +19,32 @@ module core #(
     input wire start,
     output wire done,
 
-    // Block Metadata
+    // Block Metadata  // block块的id，以及它包含的线程数
     input wire [7:0] block_id,
-    input wire [$clog2(THREADS_PER_BLOCK):0] thread_count,
+    input wire [$clog2(THREADS_PER_BLOCK):0] thread_count, 
 
-    // Program Memory
+    // Program Memory    // core 发出读地址
     output reg program_mem_read_valid,
     output reg [PROGRAM_MEM_ADDR_BITS-1:0] program_mem_read_address,
-    input reg program_mem_read_ready,
-    input reg [PROGRAM_MEM_DATA_BITS-1:0] program_mem_read_data,
-
-    // Data Memory
+    input logic program_mem_read_ready,   // core 接收读数据
+    input logic [PROGRAM_MEM_DATA_BITS-1:0] program_mem_read_data,
+  
+    // Data Memory   // 数据这里要注意，每个thread都有数据总线，SIMD； data有读写两个方向
     output reg [THREADS_PER_BLOCK-1:0] data_mem_read_valid,
     output reg [DATA_MEM_ADDR_BITS-1:0] data_mem_read_address [THREADS_PER_BLOCK-1:0],
-    input reg [THREADS_PER_BLOCK-1:0] data_mem_read_ready,
-    input reg [DATA_MEM_DATA_BITS-1:0] data_mem_read_data [THREADS_PER_BLOCK-1:0],
+    input logic [THREADS_PER_BLOCK-1:0] data_mem_read_ready,
+    input logic [DATA_MEM_DATA_BITS-1:0] data_mem_read_data [THREADS_PER_BLOCK-1:0],
     output reg [THREADS_PER_BLOCK-1:0] data_mem_write_valid,
     output reg [DATA_MEM_ADDR_BITS-1:0] data_mem_write_address [THREADS_PER_BLOCK-1:0],
     output reg [DATA_MEM_DATA_BITS-1:0] data_mem_write_data [THREADS_PER_BLOCK-1:0],
-    input reg [THREADS_PER_BLOCK-1:0] data_mem_write_ready
+    input logic [THREADS_PER_BLOCK-1:0] data_mem_write_ready
 );
-    // State
+    // State  //状态机控制的多周期CPU；core_state 是核心 
     reg [2:0] core_state;
     reg [2:0] fetcher_state;
     reg [15:0] instruction;
 
-    // Intermediate Signals
+    // Intermediate Signals  // 每个线程都有
     reg [7:0] current_pc;
     wire [7:0] next_pc[THREADS_PER_BLOCK-1:0];
     reg [7:0] rs[THREADS_PER_BLOCK-1:0];
@@ -67,8 +67,8 @@ module core #(
     reg decoded_nzp_write_enable;           // Enable writing to NZP register
     reg [1:0] decoded_reg_input_mux;        // Select input to register
     reg [1:0] decoded_alu_arithmetic_mux;   // Select arithmetic operation
-    reg decoded_alu_output_mux;             // Select operation in ALU
-    reg decoded_pc_mux;                     // Select source of next PC
+    reg decoded_alu_output_mux;             // Select operation in ALU    // 算术 和 逻辑  两种运算
+    reg decoded_pc_mux;                     // Select source of next PC   // 递增 和 跳转
     reg decoded_ret;
 
     // Fetcher
